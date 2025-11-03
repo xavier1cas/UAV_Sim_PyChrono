@@ -9,11 +9,11 @@ from acsl_pychrono.control.base_mrac_gains import BaseMRACGains
 class MRACGains(BaseMRACGains):
   def __init__(self, flight_params: FlightParams):
     # General vehicle properties
-    self.I_matrix_estimated = flight_params.I_matrix_estimated
-    self.mass_total_estimated = flight_params.mass_total_estimated
-    self.air_density_estimated = flight_params.air_density_estimated
-    self.surface_area_estimated = flight_params.surface_area_estimated
-    self.drag_coefficient_matrix_estimated = flight_params.drag_coefficient_matrix_estimated
+    self.I_matrix_estimated = flight_params.uav_controller.I_matrix_estimated
+    self.mass_total_estimated = flight_params.uav_controller.mass_total_estimated
+    self.air_density_estimated = flight_params.uav_controller.air_density_estimated
+    self.surface_area_estimated = flight_params.uav_controller.surface_area_estimated
+    self.drag_coefficient_matrix_estimated = flight_params.uav_controller.drag_coefficient_matrix_estimated
 
     # Number of states to be integrated by RK4
     self.number_of_states = 106

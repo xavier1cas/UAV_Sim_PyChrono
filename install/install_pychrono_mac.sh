@@ -73,6 +73,7 @@ conda install -y -c conda-forge matplotlib
 conda install -y -c conda-forge irrlicht=1.8.5
 conda install -y -c conda-forge pytz
 conda install -y -c conda-forge scipy
+conda install -y -c conda-forge pyyaml
 
 === Step 5: Ensure PyChrono tarball is available ===
 TARBALL="$HOME/Downloads/pychrono-8.0.0-py310_2471.tar.bz2"

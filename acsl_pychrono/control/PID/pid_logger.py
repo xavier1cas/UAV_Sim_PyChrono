@@ -10,8 +10,16 @@ class PIDLogger:
     self.gains = gains
     self.data_list = []
 
-  def collectData(self, controller: PID, simulation_time: float):
+  def collectData(self, controller: PID, simulation_time: float, number_of_propellers: int):
     DATA_vector = np.zeros((self.gains.size_DATA, 1))
+    
+    # Pad the motor thrusts with zeros if fewer than 8 propellers
+    if number_of_propellers < 8:
+      motor_thrusts = controller.motor_thrusts.reshape(number_of_propellers, 1)
+      motor_thrusts = motor_thrusts.flatten() # Flatten to 1D
+      motor_thrusts = np.pad(motor_thrusts, (0, 8 - number_of_propellers), 'constant')
+    else:
+      motor_thrusts = controller.motor_thrusts
 
     DATA_vector[0] = controller.odein.time_now
     DATA_vector[1] = simulation_time
@@ -40,7 +48,7 @@ class PIDLogger:
     DATA_vector[36] = controller.u2
     DATA_vector[37] = controller.u3
     DATA_vector[38] = controller.u4
-    DATA_vector[39:47] = controller.motor_thrusts.reshape(8,1)
+    DATA_vector[39:47] = motor_thrusts.reshape(8, 1)
     DATA_vector[47:50] = controller.angular_position_dot
     
     self.data_list.append(DATA_vector.flatten())

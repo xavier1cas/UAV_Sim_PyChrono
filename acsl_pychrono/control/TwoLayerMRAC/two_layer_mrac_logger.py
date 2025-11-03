@@ -7,8 +7,17 @@ class TwoLayerMRACLogger:
     self.gains = gains
     self.data_list = []
 
-  def collectData(self, controller: TwoLayerMRAC, simulation_time: float):
+  def collectData(self, controller: TwoLayerMRAC, simulation_time: float, number_of_propellers: int):
     DATA_vector = np.zeros((self.gains.size_DATA, 1))
+    
+    # Pad the motor thrusts with zeros if fewer than 8 propellers
+    if number_of_propellers < 8:
+      motor_thrusts = controller.motor_thrusts.reshape(number_of_propellers, 1)
+      motor_thrusts = motor_thrusts.flatten() # Flatten to 1D
+      motor_thrusts = np.pad(motor_thrusts, (0, 8 - number_of_propellers), 'constant')
+    else:
+      motor_thrusts = controller.motor_thrusts
+
 
     DATA_vector[0] = controller.odein.time_now
     DATA_vector[1] = simulation_time
@@ -39,7 +48,7 @@ class TwoLayerMRACLogger:
     DATA_vector[45] = controller.u2
     DATA_vector[46] = controller.u3
     DATA_vector[47] = controller.u4
-    DATA_vector[48:56] = controller.motor_thrusts.reshape(8,1)
+    DATA_vector[48:56] = motor_thrusts.reshape(8, 1)
     DATA_vector[56:59] = np.zeros((3, 1))
     DATA_vector[59:62] = controller.mu_adaptive_tran
     DATA_vector[62:65] = controller.mu_PD_baseline_tran

@@ -24,7 +24,7 @@ class MissionConfig:
   # "PID",
   # "MRAC",
   # "TwoLayerMRAC",
-  controller_type: str = "TwoLayerMRAC"
+  controller_type: str = "MRAC"
 
   # User-defined trajectory types:
   # "circular_trajectory",
@@ -43,7 +43,7 @@ class MissionConfig:
   hover_after_trajectory_time_seconds: float = 5.0
 
   # Flag to add or remove the payload from the simulation
-  add_payload_flag: bool = False
+  add_payload_flag: bool = True
   # Payload types: 
   # "two_steel_balls"
   # "ten_steel_balls_in_two_lines"
@@ -63,9 +63,12 @@ class MissionConfig:
 
 @dataclass
 class VehicleConfig:
-  # Path relative to 'current_working_directory/assets/vehicles'
-  model_relative_path: str = "x8copter/x8copter.py" 
-
+  # UAV types:
+  # "X8"
+  # "X8_TEST"
+  # "THRUSTSTAND"
+  # "QUAD1"
+  uav_type: str = "X8"
 @dataclass
 class EnvironmentConfig:
   # Include external environment in the simulation
