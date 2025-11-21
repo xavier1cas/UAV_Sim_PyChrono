@@ -1,7 +1,7 @@
-import math
 import numpy as np  
-from acsl_pychrono.control.PID.pid_gains import PIDGains
 from acsl_pychrono.control.PID.pid import PID
+from acsl_pychrono.control.PID.pid_gains import PIDGains
+import math
 from acsl_pychrono.simulation.ode_input import OdeInput
 from acsl_pychrono.simulation.flight_params import FlightParams
 
@@ -9,9 +9,11 @@ class PIDLogger:
   def __init__(self, gains: PIDGains) -> None:
     self.gains = gains
     self.data_list = []
+    # Length of the array vector that will be exported 
+    self.size_DATA = 50  # Ensure size_DATA is set
 
   def collectData(self, controller: PID, simulation_time: float, number_of_propellers: int):
-    DATA_vector = np.zeros((self.gains.size_DATA, 1))
+    DATA_vector = np.zeros((self.size_DATA, 1))
     
     # Pad the motor thrusts with zeros if fewer than 8 propellers
     if number_of_propellers < 8:

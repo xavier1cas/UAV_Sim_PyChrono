@@ -16,7 +16,7 @@ import acsl_pychrono.config.config as Cfg
 import acsl_pychrono.user_defined_trajectory as Traj
 from acsl_pychrono.simulation.utils import Utils
 from acsl_pychrono.control.control import Control
-import acsl_pychrono.uav as UAV
+import acsl_pychrono.uav as UAV_Module
 
 class Simulation:
   def __init__(self, sim_cfg: Cfg.SimulationConfig = Cfg.SimulationConfig()) -> None:
@@ -71,12 +71,12 @@ class Simulation:
     before specific UAV gets instantiated
     based on the selected UAV type from the configuration.
     """
-    uav_cfg = UAV.get_uav_config(self.vehicle_config.uav_type) # Config Dictionary
+    self.uav_name = self.vehicle_config.uav_name
+    uav_cfg = UAV_Module.get_uav_config(self.uav_name) # Config Dictionary
     
-    self.uav_name = uav_cfg["uav"]["name"]
     self.number_of_propellers = uav_cfg["uav"]["number_of_propellers"]
     
-    self.cad_export_filename = uav_cfg["uav"]["cad"]["export_filename"]
+    self.pychono_export      = uav_cfg["uav"]["cad"]["pychono_export"]
     self.cad_ground          = uav_cfg["uav"]["cad"]["ground"]
     self.cad_frame           = uav_cfg["uav"]["cad"]["frame"]
     self.cad_prop_prefix     = uav_cfg["uav"]["cad"]["prop_prefix"]
@@ -96,7 +96,7 @@ class Simulation:
     # Get the absolute path to the CAD model imported from SolidWorks to PyChrono
     # Prepend working directory and "/assets/vehicles"
     base_path = Path.cwd() / "assets/vehicles"
-    full_path = base_path / self.cad_export_filename
+    full_path = base_path / self.uav_name / self.pychono_export #f"{self.uav_name}_export.py"
     # Remove .py extension from the name
     chrono_cad_module_path = full_path.with_suffix('')
     
@@ -126,7 +126,7 @@ class Simulation:
       if not self.m_box:
         print(f'[WARNING] Cannot find box "{self.cad_box}-1" — skipping box.')
     else:
-      print('[INFO] No box CAD model specified, skipping box.')
+      print('[WARNING] No box CAD model specified, skipping box.')
     
     # Propellers (optional)
     self.m_props = []
@@ -138,10 +138,8 @@ class Simulation:
           print(f'[WARNING] Cannot find propeller "{name}" — skipping.')
           continue
         self.m_props.append(prop)
-      if not self.m_props:
-        print('[WARNING] No propellers found — continuing without props.')
     else:
-      print('[INFO] No propeller CAD prefix specified, skipping props.')
+      print('[WARNING] No propeller CAD prefix specified, skipping props.')
       
     print('[INFO] Body loading completed.')
 
@@ -182,7 +180,6 @@ class Simulation:
         # motor.SetMotorFunction(chrono.ChFunction_Const(5.0 * chrono.CH_C_2PI))  # Uncomment if needed
         self.m_sys.Add(motor)
         self.m_motors.append(motor)
-      # print(f"[DEBUG] Added {len(self.m_motors)} motors with CAD propellers.")
 
     # Otherwise, skip CAD model
     else:
@@ -249,24 +246,24 @@ class Simulation:
     """
     Creates auxiliary coordinate systems (Pixhawk, global, frame, box) for the UAV.
     """
-    # --- 1) Extract configuration
+    # 1) Extract configuration
     pos_pixhawk = chrono.ChVectorD(*self.pixhawk_local_pos)
     q_ned = chrono.ChQuaternionD(*self.pixhawk_q_ned)
     q_yup = chrono.ChQuaternionD(*self.pixhawk_q_yup)
     # # position of the "pixhawk's center" wrt the COG of the drone frame
     # position_pixhawk_fromCOG = chrono.ChVectorD(-0.0214807964657055, 0.0779592340719906, -0.0000487571767365452) 
     
-    # --- 2) Define global reference frame
+    # 2) Define global reference frame
     self.global_coord = chrono.ChCoordsysD(
         chrono.ChVectorD(0, 0, 0), 
         chrono.ChQuaternionD(1, 0, 0, 0)
     )
 
-    # --- 3) Define Pixhawk coordinate systems
+    # 3) Define Pixhawk coordinate systems
     self.pixhawk_csys = chrono.ChCoordsysD(pos_pixhawk, q_ned) # Coordinate System Pixhawk (NED - North East Down)
     pixhawk_csys_yup = chrono.ChCoordsysD(pos_pixhawk, q_yup)  # Coordinate System Pixhawk with (YUP - Y up)
 
-    # --- 4) Add markers to frame (reusable across UAVs)
+    # 4) Add markers to frame (reusable across UAVs)
     self.marker_pixhawk = chrono.ChMarker()
     self.marker_pixhawk.SetName("Coordinate System Pixhawk (NED)") # Create a local reference system with NED convention
     self.m_frame.AddMarker(self.marker_pixhawk)
@@ -277,14 +274,14 @@ class Simulation:
     self.m_frame.AddMarker(self.marker_pixhawk_2)
     self.marker_pixhawk_2.Impose_Abs_Coord(pixhawk_csys_yup)
 
-    # --- 5) Rotation matrix for 90° (pi/2) rotation about X-axis (Used to convert y-up to NED reference frames)
+    # 5) Rotation matrix for 90° (pi/2) rotation about X-axis (Used to convert y-up to NED reference frames)
     self.RR = chrono.ChMatrix33D()
     RRX_plusPI2 = [[1,  0, 0],
                    [0,  0, 1],
                    [0, -1, 0]]
     self.RR.SetMatr(RRX_plusPI2)
 
-    # --- 6) Store reference coordinate systems for box and frame
+    # 6) Store reference coordinate systems for box and frame
     self.m_frame_csys = self.m_frame.GetFrame_REF_to_abs().GetCoord() # Identify Local reference system of drone frame
     self.m_box_csys = self.m_box.GetFrame_REF_to_abs().GetCoord() # Identify Local reference system of Box
 
@@ -346,7 +343,7 @@ class Simulation:
     """
     if (self.mission_config.add_payload_flag and self.mission_config.payload_type == "two_steel_balls"):
       # Computing Center Of Mass (COM) of the system: drone frame + box + propellers + balls
-      # --- 1) Get core masses
+      # 1) Get core masses
       self.m_frame_mass = self.m_frame.GetMass()
       if self.cad_box != "":
         self.m_box_mass = self.m_box.GetMass()
@@ -355,7 +352,7 @@ class Simulation:
         print("[INFO] Box mass set to zero.")
       print(f"[DEBUG] Box mass = {self.m_box_mass} [kg]")
       
-      # --- 2) Compute propeller masses dynamically
+      # 2) Compute propeller masses dynamically
       self.m_prop_masses = []
       for prop in self.m_props:
         m_prop_mass = prop.GetMass()
@@ -363,17 +360,16 @@ class Simulation:
       print(f"[DEBUG] Propeller masses = {self.m_prop_masses} [kg]")
       
       m_prop_total_mass = sum(self.m_prop_masses)
-      # print(self.m_prop_mass, "******************")
       
-      # --- 3) Get payload masses
+      # 3) Get payload masses
       self.m_ball1_mass = self.m_ball1.GetMass()
       self.m_ball2_mass = self.m_ball2.GetMass()
       
-      # --- 4) Compute total system masses
+      # 4) Compute total system masses
       self.mass_total = self.m_frame_mass + self.m_box_mass + m_prop_total_mass
       self.mass_total_wballs = self.mass_total + self.m_ball1_mass + self.m_ball2_mass
 
-      # --- 5) Initialize COG vectors (set to zero)
+      # 5) Initialize COG vectors (set to zero)
       self.COG_total = chrono.ChVectorD()
       self.COG = chrono.ChVectorD()
 
@@ -385,7 +381,7 @@ class Simulation:
     Generalized to support any number of propellers in self.m_props.
     """
     if self.mission_config.add_payload_flag and self.mission_config.payload_type == "two_steel_balls":
-      # --- 1) Compute the position (in global coordinates) of the bodies
+      # 1) Compute the position (in global coordinates) of the bodies
       # Global coordinates of the origin of the drone frame containing just the position
       my_frame_pos_GLOB = self.m_frame.GetPos()
       # This gives the position of the auxillary csys imported from/defined in SolidWorks
@@ -393,14 +389,14 @@ class Simulation:
       # Same as asking for .GetPos() --> meaning GetPos() refers to the COG position!!!!
       my_box_pos = self.m_box.GetFrame_COG_to_abs().GetCoord().pos
 
-      # --- 2) Compute total propeller contribution dynamically
+      # 2) Compute total propeller contribution dynamically
       # Check if we have a list of per-propeller masses
       # For this block to work, the generalization in setupCOMcomputationOfSystemWithPayload() must be done first
       total_prop_mass_contribution = chrono.ChVectorD(0, 0, 0)
       for prop, mass in zip(self.m_props, self.m_prop_masses):
         total_prop_mass_contribution += prop.GetPos() * mass
 
-      # --- 3) Compute COG in Global Coordinates (with payload)
+      # 3) Compute COG in Global Coordinates (with payload)
       # (First you must put the ChVector (position) and then you can multiply it by a float (mass). Order is important!!!)
       self.COG_total = (
         my_frame_pos_GLOB * self.m_frame_mass
@@ -410,18 +406,18 @@ class Simulation:
         + self.m_ball2.GetPos() * self.m_ball2_mass
       ) * (1 / self.mass_total_wballs)
 
-      # --- 4) Compute COG without payload (drone only)
+      # 4) Compute COG without payload (drone only)
       self.COG = (
           my_frame_pos_GLOB * self.m_frame_mass
           + my_box_pos * self.m_box_mass
           + total_prop_mass_contribution
       ) * (1 / self.mass_total)
 
-      # --- 5) Transform to local reference frame
+      # 5) Transform to local reference frame
       # Position of COG seen from the local reference system of the frame
       self.my_COG_local = self.m_frame_csys.TransformParentToLocal(self.COG)
 
-      # --- 6) Transform payload and COG_total into box frame coordinates
+      # 6) Transform payload and COG_total into box frame coordinates
       # Position of Ball1, Ball2 and COG_total seen from the local reference system of the Box
       self.my_ball1_pos_box = self.m_box_csys.TransformParentToLocal(self.m_ball1.GetPos())
       self.my_ball2_pos_box = self.m_box_csys.TransformParentToLocal(self.m_ball2.GetPos())
@@ -572,7 +568,9 @@ class Simulation:
       True
     )
 
-  def applyWindForce(self, flight_params: FlightParams,  wind_force_vector: tuple[float, float, float], apply: bool = False):
+  def applyWindForce(self, flight_params: FlightParams,
+                     wind_force_vector: tuple[float, float, float] = (1.0, 0.0, 0.0),
+                     apply: bool = False):
     """
     Apply a constant wind force to the UAV if `apply` is True.
 
@@ -670,20 +668,24 @@ class Simulation:
         omega_reduced = omega_signed[i] / reducing_factor
         self.m_motors[i].SetMotorFunction(chrono.ChFunction_Const(omega_reduced))
 
-  def handlePayloadDroppingBalls12(self, time_now: float, apply: bool = False):
+  def handlePayloadDroppingBalls12(self, time_now: float,
+                                   apply: bool=False, 
+                                   drop_time: float=3.7,        # Time at which payloads should be dropped.
+                                   disable_duration: float=0.15 # Time duration for which collisions are disabled after the drop.
+                                   ): 
     """
     Temporarily disables and then re-enables collisions for the payloads to simulate dropping them if `apply` is True.
 
     Parameters:
-    - time_now (float): The current simulation time.
-    - apply (bool): Whether or not to apply the payload dropping.
+    - time_now (float):         The current simulation time.
+    - apply (bool):             Whether or not to apply the payload dropping.
+    - drop_time (float):        Time at which payloads should be dropped.
+    - disable_duration (float): Time duration for which collisions are disabled after the drop.
     """
     if not apply:
       return
     
     if (self.mission_config.add_payload_flag and self.mission_config.payload_type == "two_steel_balls"):
-      drop_time = 3.7 # Time at which payloads should be dropped.
-      disable_duration = 0.15 # Time duration for which collisions are disabled after the drop.
 
       if (time_now > drop_time):
         self.m_ball1.SetCollide(False)
@@ -692,36 +694,42 @@ class Simulation:
         self.m_ball1.SetCollide(True)
         self.m_ball2.SetCollide(True)
 
-  def handleMotorFailure(self, time_now: float, flight_params: FlightParams, apply: bool = False):
+  def handleMotorFailure(self, time_now: float, flight_params: FlightParams, apply: bool=False, failure_time: float=4.5):
     """
     Modifies the motor efficiency matrix that simulates motor failure after a given time.
 
     Parameters:
-    - time_now (float): The current simulation time.
-    - apply (bool): Whether or not to apply the motor failure.
+    - time_now (float):     The current simulation time.
+    - apply (bool):         Whether or not to apply the motor failure.
+    - failure_time (float): Time at which the motor failure occurs.
     """
     if not apply:
       return
 
-    failure_time = 1.5 # 4.5
+    
     if (time_now > failure_time):
       flight_params.uav.motor_efficiency_matrix = flight_params.uav.motor_efficiency_matrix_after_failure
 
-  def sequentiallyDropBalls(self, time_now: float, apply: bool = False):
+  def sequentiallyDropBalls(self, time_now: float,
+                            apply: bool = False,
+                            drop_start_time: float=3.0,     # Time at which the first ball starts dropping
+                            drop_interval: float=0.10,      # Time delay between successive ball drops
+                            disable_duration: float=0.15    # How long each ball should stay non-collidable
+                            ):
     """
     Toggles collision state of balls one by one to simulate sequential payload dropping.
 
     Parameters:
-    - time_now (float): Current simulation time.
-    - apply (bool): Whether or not to apply the payload dropping.
+    - time_now (float):         Current simulation time.
+    - apply (bool):             Whether or not to apply the payload dropping.
+    - drop_start_time (float):  Time at which the first ball starts dropping
+    - drop_interval (float):    Time delay between successive ball drops.
+    - disable_duration (float): How long each ball should stay non-collidable
     """
     if not apply:
       return
 
     if (self.mission_config.add_payload_flag and self.mission_config.payload_type != "two_steel_balls"):
-      drop_start_time = 3.0 # Time at which the first ball starts dropping
-      drop_interval = 0.10 # Time delay between successive ball drops.
-      disable_duration = 0.15 # How long each ball should stay non-collidable
 
       if not hasattr(self, "m_spheres") or len(self.m_spheres) == 0:
         return  # No spheres to drop
@@ -778,9 +786,9 @@ class Simulation:
     simulation_time = time.time() - start_sim_time # Time that the simulation is taking
 
     self.updateSystemStates(time_now)
-    self.applyExternalForces()
-    self.handlePayloadMechanisms(time_now)
-    self.handleFaults(time_now)
+    self.applyExternalForces(self.mission_config)
+    self.handlePayloadMechanisms(time_now, self.mission_config)
+    self.handleFaults(time_now, self.mission_config)
     self.runControllerIfStarted(time_now, simulation_time)
 
     self.debugPrints(time_now, simulation_time)
@@ -800,11 +808,11 @@ class Simulation:
       user_defined_trajectory_state
     )
   
-  def applyExternalForces(self):
+  def applyExternalForces(self, mission_config: Cfg.MissionConfig):
     # Applying AERODYNAMIC FORCE to the drone
     self.applyAerodynamicForce(self.flight_params)
     # Applying a constant WIND FORCE to the drone, expressed in pychrono global coordinate
-    self.applyWindForce(self.flight_params, (1.0, 0.0, 0.0), apply=False)
+    self.applyWindForce(self.flight_params, wind_force_vector=mission_config.wind_force_vector, apply=mission_config.apply_wind_force)
 
   def runControllerIfStarted(self, time_now: float, simulation_time: float):
     if time_now <= self.flight_params.controller_start_time:
@@ -825,15 +833,18 @@ class Simulation:
     # Collect the log data
     self.logger.collectData(self.controller, simulation_time, self.number_of_propellers)
 
-  def handlePayloadMechanisms(self, time_now: float):
+  def handlePayloadMechanisms(self, time_now: float, mission_config: Cfg.MissionConfig):
     # Payload Dropping
-    self.handlePayloadDroppingBalls12(time_now, apply=False)
+    self.handlePayloadDroppingBalls12(time_now, apply=mission_config.drop_two_steel_balls, drop_time=mission_config.two_steel_balls_drop_time)
     # Dropping multiple balls one after the other
-    self.sequentiallyDropBalls(time_now, apply=False)
+    self.sequentiallyDropBalls(time_now,
+                               apply=mission_config.sequentially_drop_multiple_balls,
+                               drop_start_time=mission_config.sequentially_drop_start_time,
+                               drop_interval=mission_config.sequentially_drop_interval)
 
-  def handleFaults(self, time_now: float):
+  def handleFaults(self, time_now: float, mission_config: Cfg.MissionConfig):
     # Motor failure
-    self.handleMotorFailure(time_now, self.flight_params, apply=False)
+    self.handleMotorFailure(time_now, self.flight_params, apply=mission_config.apply_motor_failure, failure_time=mission_config.motor_failure_time)
 
   def debugPrints(self, time_now: float, simulation_time: float):
     # Print data to Console

@@ -1,9 +1,8 @@
 uav:
-  name: "Quad-Copter"
   number_of_propellers: 4
 
   cad:
-    export_filename: "quadcopter1/quadcopter1.py"
+    pychono_export: "QUAD1_export.py" # Must match the name of the .py file exported from pychrono in the assets/vehicles folder
     ground: "ground"
     frame: "UAV_Assembly_part_single"
     box: "Box_200x200x100"
@@ -14,6 +13,8 @@ uav:
     orientation_ned: [0.70710678118, 0.70710678118, 0, 0] # for chrono quaternion (NED - North East Down)
     orientation_yup: [1, 0, 0, 0]                         # for chrono quaternion (YUP - Y up)
 
+  mass_total: 1.10313 # [kg] 2.025 -- 3.1, Get the estimate from Solidworks
+  
   inertia: # Get it from the center of mass of the full assembly
   # (drone frame + box + propellers) espressed in Solidworks coordinate sys (x-front, y-up, z-right), computed at the center of mass
     Lxx : !!float 10236202.56e-9
@@ -73,10 +74,8 @@ uav:
   aerodynamic_force_application_point: [0.00271, -0.08070, -0.00011]
 
 controller:
-  mass_total_estimated: 1.10313 # [kg] 2.025 -- 3.1 (Get it from the full assembly in Solidworks)
-
   # These shouldn't change unless you change the mission
-  gains:
+  derivative_filter_gains:
     # Roll filters gains (from matlab)
     A_phi_ref: [[-15, -225],[1, 0]]
     B_phi_ref: [[1],[0]]
@@ -90,37 +89,7 @@ controller:
   K_omega: 0.0000014166615 # Coefficent relating the propellers'thrust to the square of the angular velocity. controller.motor_thrusts = K * omega^2
   K_torque: !!float 5e-08 # [5e-08 - 5e-10] TO BE ESTIMATED!!! Coefficent relating the propellers'torque to the square of the angular velocity. Torque = K_torque * omega^2
   
-  PID:
-    # Number of states to be integrated by RK4
-    number_of_states: 10
-
-    # Length of the array vector that will be exported 
-    size_DATA: 50
-
-    # **Translational** PID parameters 
-    KP_tran: [77,84,35]
-    KD_tran: [34,29,6]
-    KI_tran: [12,5,5]
-
-    # **Rotational** PID parameters
-    KP_rot: [100,50,20]
-    KD_rot: [10,55,20]
-    KI_rot: [10,10,10]
-    
-    # ----------------------------------------------------------------
-    #                   Safety Mechanism Parameters
-    # ----------------------------------------------------------------
-    use_safety_mechanism: False
-    
-    # Mu - sphere intersection
-    sphereEpsilon: !!float 1e-3
-    maximumThrust: 85 # [N] 85
-    
-    # Mu - elliptic cone intersection
-    EllipticConeEpsilon: !!float 1e-2
-    maximumRollAngle: 85 # [rad]
-    maximumPitchAngle: 85 # [rad]
-    
-    # Mu - plane intersection
-    planeEpsilon: !!float 1e-2
-    alphaPlane: 0.6 # [-] coefficient for setting the 'height' of the bottom plane. Must be >0 and <1.
+  gain_yaml_files:  
+    PID: "PID.yaml"
+    MRAC: "MRAC.yaml"
+    TwoLayerMRAC: "TwoLayerMRAC.yaml"

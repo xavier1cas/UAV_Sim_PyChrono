@@ -6,9 +6,11 @@ class MRACLogger:
   def __init__(self, gains: MRACGains) -> None:
     self.gains = gains
     self.data_list = []
+    # Length of the array vector that will be exported 
+    self.size_DATA = 181
 
   def collectData(self, controller: MRAC, simulation_time: float, number_of_propellers: int):
-    DATA_vector = np.zeros((self.gains.size_DATA, 1))
+    DATA_vector = np.zeros((self.size_DATA, 1))
     
     # Pad the motor thrusts with zeros if fewer than 8 propellers
     if number_of_propellers < 8:

@@ -1,46 +1,53 @@
 # acsl_pychrono/uav/__init__.py
 from pathlib import Path
+import importlib
+import pkgutil
 import yaml
-from .X8 import X8, X8_Controller_Params
-from .X8_TEST import X8_TEST, X8_TEST_Controller_Params
-from .QUAD1 import QUAD1, QUAD1_Controller_Params
-from .THRUSTSTAND import THRUSTSTAND, THRUSTSTAND_Controller_Params
+from .uav_parent_class_file import UAV_PARENT_CLASS as UAV
+from .uav_controller_params import UAV_Controller_Params
 
-uav_classes = {
-  'X8': (X8, X8_Controller_Params),
-  'X8_TEST': (X8_TEST, X8_TEST_Controller_Params),
-  'QUAD1': (QUAD1, QUAD1_Controller_Params),
-  'THRUSTSTAND': (THRUSTSTAND, THRUSTSTAND_Controller_Params),
+# Dynamically discover UAV modules in the current package instead of hardcoding them
+_package_path = Path(__file__).parent # Path to the current package directory
+_discovered_uavs = {                  # Map of UAV type to module name
+  m.name: "UAV_INSTANCE"                                 
+  for m in pkgutil.iter_modules([str(_package_path)])   
+  if not m.name.startswith("_")
 }
 
-uav_config_name = {
-  'X8': "x8_config.yaml",
-  'X8_TEST': "x8_test_config.yaml",
-  'QUAD1': "quad1_config.yaml",
-  'THRUSTSTAND': "thruststand_config.yaml",
-}
+def instantiateUAV(uav_name: str, controller_name: str):
+  """Dynamically instantiate a UAV and its controller parameters based on the UAV type."""
+  # Normalize UAV type to uppercase
+  # uav_name = uav_name.upper()
+  if uav_name not in _discovered_uavs:
+    raise ValueError(f"Unknown UAV type: {uav_name}")
 
-def instantiateUAV(uav_type: str):
-  if uav_type not in uav_classes:
-    raise ValueError(f"Unknown controller type: {uav_type}")
-  
-  UAV_Class, UAV_Controller_Params_Class = uav_classes[uav_type]
+  # Import the UAV module dynamically
+  module_name = _discovered_uavs[uav_name]
+  module = importlib.import_module(f".{uav_name}", package=__name__)
+
+  # Get the UAV class and its controller parameters class
+  UAV_Class = getattr(module, module_name)
+  # UAV_Controller_Params_Class = getattr(module, f"{uav_name}_Controller_Params")
+
+  # Instantiate UAV and its controller parameters
   uav = UAV_Class()
-  # Controller parameters depend on the UAV parameters to get estimates
-  uav_controller = UAV_Controller_Params_Class(uav)
-  
+  uav_controller = UAV_Controller_Params(uav, controller_name)
   return uav, uav_controller
 
+# Function to get UAV configuration dictionary
+def get_uav_config(uav_name: str):
+  """Load the UAV configuration from its YAML file."""
+  # Normalize UAV type to uppercase
+  # uav_name = uav_name.upper()
+  module_name = _discovered_uavs.get(uav_name) # Get module name
+  if not module_name:
+    raise ValueError(f"Unknown UAV type: {module_name}")
 
-def get_uav_config(uav_type: str) :
-  if uav_type not in uav_classes:
-    raise ValueError(f"Unknown UAV type: {uav_type}")
-  
-  # Prepend working directory and "/acsl_pychrono/uav/*uav_type*/*config_file_name*"
-  config_file_name = uav_config_name[uav_type]
-  absolute_path = Path.cwd() / "acsl_pychrono/uav" / uav_type / config_file_name
-  
-  with open(absolute_path, 'r') as f:
-    uav_cfg = yaml.safe_load(f)
-      
-  return uav_cfg
+  # Construct path to the config YAML file
+  config_path = _package_path / uav_name / f"{uav_name}_config.yaml"
+  if not config_path.exists():
+    raise FileNotFoundError(f"Config not found for {uav_name} at {config_path}")
+
+ # Load and return the configuration dictionary
+  with open(config_path, "r") as f:
+    return yaml.safe_load(f)

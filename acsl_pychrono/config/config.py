@@ -24,7 +24,7 @@ class MissionConfig:
   # "PID",
   # "MRAC",
   # "TwoLayerMRAC",
-  controller_type: str = "MRAC"
+  controller_type: str = "TwoLayerMRAC"
 
   # User-defined trajectory types:
   # "circular_trajectory",
@@ -48,7 +48,25 @@ class MissionConfig:
   # "two_steel_balls"
   # "ten_steel_balls_in_two_lines"
   # "many_steel_balls_in_random_position"
-  payload_type: str = "two_steel_balls"
+  payload_type: str = "ten_steel_balls_in_two_lines"
+  
+  # Payload Dropping (only for "two_steel_balls" payload type)
+  drop_two_steel_balls: bool = False
+  two_steel_balls_drop_time: float = 1.0 # 3.7
+  
+  # Dropping multiple balls one after the other (only for payload types other than "two_steel_balls")
+  sequentially_drop_multiple_balls: bool = True
+  sequentially_drop_start_time: float = 1.0 # 3.0
+  sequentially_drop_interval: float = 0.10
+  
+  # Motor Failure parameters
+  apply_motor_failure: bool = False
+  motor_failure_time: float = 1.0 # 4.5
+  
+  # Apply External Forces
+  # Applying Aero-Dynamic force to the drone
+  apply_wind_force: bool = False
+  wind_force_vector: tuple[float, float, float] = (0.5, 0.0, 0.0) # [N] in global pychrono coordinate system
 
   # Unique wrapper batch folder passed to the function used for running many parallel wrapper simulations 
   wrapper_batch_dir: str = "" # LEAVE BLANK!!!
@@ -66,9 +84,12 @@ class VehicleConfig:
   # UAV types:
   # "X8"
   # "X8_TEST"
-  # "THRUSTSTAND"
+  # "X8_DEFAULT"
+  # "X8_RED"
+  # "SIMPLE_QUAD"
+  # "QUAD_PURPLE"
   # "QUAD1"
-  uav_type: str = "X8"
+  uav_name: str = "X8"
 @dataclass
 class EnvironmentConfig:
   # Include external environment in the simulation

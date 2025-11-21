@@ -2,7 +2,7 @@ import traceback
 from acsl_pychrono.simulation.simulation import Simulation
 import acsl_pychrono.user_defined_trajectory as Traj
 import acsl_pychrono.control as Ctrl
-import acsl_pychrono.uav as UAV
+import acsl_pychrono.uav as UAV_Module
 from acsl_pychrono.control.logging import Logging
 from acsl_pychrono.simulation.ode_input import OdeInput
 from acsl_pychrono.simulation.flight_params import FlightParams
@@ -10,8 +10,9 @@ from acsl_pychrono.simulation.flight_params import FlightParams
 def simulateMission(sim: Simulation, git_info: dict | None = None):
   
   # Instantiation of UAV and its controller parameters
-  (uav, uav_controller) = UAV.instantiateUAV(
-    sim.vehicle_config.uav_type
+  (uav, uav_controller) = UAV_Module.instantiateUAV(
+    sim.vehicle_config.uav_name,
+    sim.mission_config.controller_type
   )
   
   # Instantiation of classes

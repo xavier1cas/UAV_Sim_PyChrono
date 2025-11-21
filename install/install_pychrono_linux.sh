@@ -49,6 +49,7 @@ conda activate chrono
 # Step 5: Install dependencies
 echo "📦 Installing required packages..."
 conda install -y -c conda-forge numpy=1.24.0 matplotlib irrlicht=1.8.5 pytz scipy pyyaml
+pip install ruamel.yaml 
 
 # Step 6: Install PyChrono from tarball
 VERSION="8.0.0"

@@ -277,7 +277,7 @@ def rk4singlestep(fun, dt, t0, y0):
 
 def rk4singlestepWP(fun, dt, t0, y0, params):
     """
-    This function does a single 4th-order Runge-Kutta integration step and it allow the passing of additional parameters
+    This function does a single 4th-order Runge-Kutta integration step and allows the passing of additional parameters
 
     Parameters
     ----------

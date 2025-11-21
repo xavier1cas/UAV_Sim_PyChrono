@@ -1,9 +1,9 @@
 import math
-import numpy as np
-from numpy import linalg as LA
-import scipy
-from scipy import linalg
 from acsl_pychrono.simulation.flight_params import FlightParams
+# import numpy as np
+# from numpy import linalg as LA
+# import scipy
+# from scipy import linalg
 
 class PIDGains:
   def __init__(self, flight_params: FlightParams):
@@ -14,68 +14,39 @@ class PIDGains:
     self.surface_area_estimated = flight_params.uav_controller.surface_area_estimated
     self.drag_coefficient_matrix_estimated = flight_params.uav_controller.drag_coefficient_matrix_estimated
 
+    # Controller's numerical Parameters config filename
+    gains_config_filename = flight_params.uav_controller.controller_config_filename
+    gains_config_file = flight_params.get_controller_config(gains_config_filename, flight_params.uav.name)
+    
     # Number of states to be integrated by RK4
-    self.number_of_states = flight_params.uav_controller.PID_number_of_states
-    # Length of the array vector that will be exported 
-    self.size_DATA = flight_params.uav_controller.PID_size_DATA
+    self.number_of_states = 10
     
     # **Translational** PID parameters 
-    self.KP_tran = np.matrix(np.diag(flight_params.uav_controller.PID_KP_tran))
-    self.KD_tran = np.matrix(np.diag(flight_params.uav_controller.PID_KD_tran))
-    self.KI_tran = np.matrix(np.diag(flight_params.uav_controller.PID_KI_tran))
+    self.KP_tran = flight_params.get_scaled_matrix_from_config(gains_config_file, "KP_tran")
+    self.KD_tran = flight_params.get_scaled_matrix_from_config(gains_config_file, "KD_tran")
+    self.KI_tran = flight_params.get_scaled_matrix_from_config(gains_config_file, "KI_tran")
 
     # **Rotational** PID parameters
-    self.KP_rot = np.matrix(np.diag(flight_params.uav_controller.PID_KP_rot))
-    self.KD_rot = np.matrix(np.diag(flight_params.uav_controller.PID_KD_rot))
-    self.KI_rot = np.matrix(np.diag(flight_params.uav_controller.PID_KI_rot))
+    self.KP_rot = flight_params.get_scaled_matrix_from_config(gains_config_file, "KP_rot")
+    self.KD_rot = flight_params.get_scaled_matrix_from_config(gains_config_file, "KD_rot")
+    self.KI_rot = flight_params.get_scaled_matrix_from_config(gains_config_file, "KI_rot")
     
     # ----------------------------------------------------------------
     #                   Safety Mechanism Parameters
     # ----------------------------------------------------------------
-    self.use_safety_mechanism = flight_params.uav_controller.PID_use_safety_mechanism
+    self.use_safety_mechanism = flight_params.get_scalar_from_config(gains_config_file, "use_safety_mechanism")
     
     # Mu - sphere intersection
-    self.sphereEpsilon = flight_params.uav_controller.PID_sphereEpsilon
-    self.maximumThrust = flight_params.uav_controller.PID_maximumThrust # [N] 85
+    self.sphereEpsilon = flight_params.get_scalar_from_config(gains_config_file, "sphereEpsilon")
+    self.maximumThrust = flight_params.get_scalar_from_config(gains_config_file, "maximumThrust") # [N] 85
     
     # Mu - elliptic cone intersection
-    self.EllipticConeEpsilon = flight_params.uav_controller.PID_EllipticConeEpsilon
-    self.maximumRollAngle = math.radians(flight_params.uav_controller.PID_maximumRollAngle) # [rad] 25
-    self.maximumPitchAngle = math.radians(flight_params.uav_controller.PID_maximumPitchAngle) # [rad] 25
+    self.EllipticConeEpsilon = flight_params.get_scalar_from_config(gains_config_file, "EllipticConeEpsilon")
+    self.maximumRollAngle = math.radians(flight_params.get_scalar_from_config(gains_config_file, "maximumRollAngle_deg")) # [rad] 25
+    self.maximumPitchAngle = math.radians(flight_params.get_scalar_from_config(gains_config_file, "maximumPitchAngle_deg")) # [rad] 25
     
     # Mu - plane intersection
-    self.planeEpsilon = flight_params.uav_controller.PID_planeEpsilon
-    self.alphaPlane = flight_params.uav_controller.PID_alphaPlane # [-] coefficient for setting the 'height' of the bottom plane. Must be >0 and <1.
+    self.planeEpsilon = flight_params.get_scalar_from_config(gains_config_file, "planeEpsilon")
+    self.alphaPlane = flight_params.get_scalar_from_config(gains_config_file, "alphaPlane") # [-] coefficient for setting the 'height' of the bottom plane. Must be >0 and <1.
     
-    # For X8-Copter
-    # # **Translational** PID parameters 
-    # # self.KP_tran = np.matrix(1 * np.diag([5,5,6]))
-    # # self.KD_tran = np.matrix(1 * np.diag([8,8,3]))
-    # # self.KI_tran = np.matrix(1 * np.diag([1,1,1]))
-
-    # self.KP_tran = np.matrix(1 * np.diag([77,84,35]))
-    # self.KD_tran = np.matrix(1 * np.diag([34,29,6]))
-    # self.KI_tran = np.matrix(1 * np.diag([129,53,53]))
-
-    # # **Rotational** PID parameters
-    # self.KP_rot = np.matrix(1 * np.diag([100,100,50]))
-    # self.KD_rot = np.matrix(1 * np.diag([50,50,50]))
-    # self.KI_rot = np.matrix(1 * np.diag([20,20,10]))
-    
-    # # ----------------------------------------------------------------
-    # #                   Safety Mechanism Parameters
-    # # ----------------------------------------------------------------
-    # self.use_safety_mechanism = True
-    
-    # # Mu - sphere intersection
-    # self.sphereEpsilon = 1e-2
-    # self.maximumThrust = 85 # [N] 85
-    
-    # # Mu - elliptic cone intersection
-    # self.EllipticConeEpsilon = 1e-2
-    # self.maximumRollAngle = math.radians(60) # [rad] 25
-    # self.maximumPitchAngle = math.radians(60) # [rad] 25
-    
-    # # Mu - plane intersection
-    # self.planeEpsilon = 1e-2
-    # self.alphaPlane = 0.6 # [-] coefficient for setting the 'height' of the bottom plane. Must be >0 and <1.
+    print(f"[INFO] Successfully loaded PID Gains")

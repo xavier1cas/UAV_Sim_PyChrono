@@ -23,6 +23,7 @@ call conda create -y -n %ENV_NAME% python=%PYTHON_VERSION%
 echo.
 echo [3/5] Installing dependencies into %ENV_NAME%...
 call conda install -y -n %ENV_NAME% -c conda-forge numpy=1.24.0 matplotlib irrlicht=1.8.5 pytz scipy pyyaml
+call pip install ruamel.yaml
 
 echo.
 echo [4/5] Checking for manually downloaded tarball...
