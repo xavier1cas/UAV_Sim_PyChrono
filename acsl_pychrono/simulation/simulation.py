@@ -86,6 +86,10 @@ class Simulation:
     self.pixhawk_local_pos = uav_cfg["uav"]["pixhawk"]["position_local"]
     self.pixhawk_q_ned     = uav_cfg["uav"]["pixhawk"]["orientation_ned"]
     self.pixhawk_q_yup     = uav_cfg["uav"]["pixhawk"]["orientation_yup"]
+    
+    # [DEBUG]
+    self.force_positions = uav_cfg["uav"]["force_positions"]
+    self.COG = uav_cfg["uav"]["aerodynamic_force_application_point"]
 
   def setGravitationalAcceleration(self, flight_params: FlightParams):
     self.m_sys.SetGravitationalAcceleration(chrono.ChVector3d(0,-flight_params.uav.G_acc,0))
@@ -134,16 +138,24 @@ class Simulation:
     
     # Propellers (optional)
     self.m_props = []
-    if self.cad_prop_prefix != "":
-      for i in range(1, self.number_of_propellers + 1):
-        name = f"{self.cad_prop_prefix}-{i}"
-        prop = self.m_sys.SearchBody(name)
+    if isinstance(self.cad_prop_prefix, list):
+      for i in range(self.number_of_propellers):
+        prop = self.m_sys.SearchBody(self.cad_prop_prefix[i])
         if not prop:
           print(f'[WARNING] Cannot find propeller "{name}" — skipping.')
           continue
         self.m_props.append(prop)
     else:
-      print('[WARNING] No propeller CAD prefix specified, skipping props.')
+      if self.cad_prop_prefix != "":
+        for i in range(1, self.number_of_propellers + 1):
+          name = f"{self.cad_prop_prefix}-{i}"
+          prop = self.m_sys.SearchBody(name)
+          if not prop:
+            print(f'[WARNING] Cannot find propeller "{name}" — skipping.')
+            continue
+          self.m_props.append(prop)
+      else:
+        print('[WARNING] No propeller CAD prefix specified, skipping props.')
       
     print('[INFO] Body loading completed.')
 
@@ -298,6 +310,24 @@ class Simulation:
     self.marker_pixhawk.SetName("Coordinate System Pixhawk (NED)") # Create a local reference system with NED convention
     self.m_frame.AddMarker(self.marker_pixhawk)
     self.marker_pixhawk.ImposeAbsoluteTransform(chrono.ChFramed(self.pixhawk_csys))
+    
+    # # [DEBUG] visualization of thrust coordinate systems
+    # pos_COG = chrono.ChVector3d(*self.COG)
+    # COG_csys_yup = chrono.ChCoordsysd(pos_COG, q_yup)
+    # marker_COG = chrono.ChMarker()
+    # marker_COG.SetName("Coordinate System COG") # Create a local reference system with NED convention
+    # self.m_frame.AddMarker(marker_COG)
+    # marker_COG.ImposeAbsoluteTransform(chrono.ChFramed(COG_csys_yup))
+    # self.markers = [marker_COG]
+    # for force in self.force_positions:
+    #   pos_force = chrono.ChVector3d(*force)
+    #   force_csys_yup = chrono.ChCoordsysd(pos_force, q_yup)
+    #   marker_force = chrono.ChMarker()
+    #   marker_force.SetName("Coordinate System force") # Create a local reference system with NED convention
+    #   self.m_frame.AddMarker(marker_force)
+    #   marker_force.ImposeAbsoluteTransform(chrono.ChFramed(force_csys_yup))
+    #   self.markers.append(marker_force)
+    
 
     self.marker_pixhawk_2 = chrono.ChMarker()
     self.marker_pixhawk_2.SetName("Coordinate System Pixhawk (Y-up)")  # Create a local reference system with Y up convention
@@ -324,7 +354,8 @@ class Simulation:
     self.mfloor.SetFixed(True)
     self.mfloor_Yposition = 0.3
     self.mfloor.SetPos(chrono.ChVector3d(0,-self.mfloor_Yposition,0))
-    self.mfloor.GetVisualShape(0).SetTexture(chrono.GetChronoDataFile("textures/light_gray.png"))
+    # self.mfloor.GetVisualShape(0).SetTexture(chrono.GetChronoDataFile("textures/light_gray.png"))
+    self.mfloor.GetVisualShape(0).SetColor(chrono.ChColor(0.25, 0.4, 0.25))
     self.m_sys.Add(self.mfloor)
 
   def addTwoSteelBallsPayload(self):
@@ -653,7 +684,8 @@ class Simulation:
     for i, motor_idx in enumerate(motor_index_map):
       thrust_value = controller.motor_thrusts[motor_idx][0]
       force_vec = chrono.ChVector3d(0, thrust_value, 0)
-      # force_vec = chrono.ChVectorD(0, 0, 0) # For debugging
+      # force_vec = chrono.ChVector3d(0, 0, 0) # For debugging
+      # force_vec = chrono.ChVector3d(0, 1.8, 0) # For debugging
 
       # Pick the position corresponding to this motor
       # If fewer positions are defined (e.g., symmetrical pairs), cycle through them

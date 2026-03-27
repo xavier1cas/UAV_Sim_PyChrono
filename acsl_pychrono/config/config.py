@@ -55,17 +55,17 @@ class MissionConfig:
   hover_after_trajectory_time_seconds: float = 5.0
 
   # Flag to add or remove the payload from the simulation
-  add_payload_flag: bool = False
+  add_payload_flag: bool = True
   # Payload types: 
   # "two_steel_balls"
   # "ten_steel_balls_in_two_lines"
   # "many_steel_balls_in_random_position"
   # "sling_ball_payload"
-  payload_type: str = "sling_ball_payload"
+  payload_type: str = "two_steel_balls"
 
   # Payload Dropping (only for "two_steel_balls" payload type)
-  drop_two_steel_balls: bool = False
-  two_steel_balls_drop_time: float = 1.0 # 3.7
+  drop_two_steel_balls: bool = True
+  two_steel_balls_drop_time: float = 4.0 # 3.7
   
   # Dropping multiple balls one after the other (only for payload types other than "two_steel_balls")
   sequentially_drop_multiple_balls: bool = False

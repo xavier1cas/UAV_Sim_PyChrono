@@ -17,7 +17,7 @@ class Visualization:
     vis.SetWindowSize(1280,960) # (1024,768), (1536,1152)
     vis.SetWindowTitle(self.sim.uav_name + '-Copter - Controller: ' + self.sim.mission_config.controller_type)
     vis.Initialize()
-    vis.AddLogo(chrono.GetChronoDataPath() + 'logo_pychrono_alpha.png')
+    vis.AddLogo(chrono.GetChronoDataFile('logo_chrono_alpha.png'))
     vis.AddSkyBox()
     vis.AddCamera(
       chrono.ChVector3d(self.sim.m_frame.GetPos().x, 0, self.sim.m_frame.GetPos().z)
@@ -69,6 +69,13 @@ class Visualization:
     # Draw coordinate systems
     irr.drawCoordsys(self.sim.vis, self.sim.marker_pixhawk.GetAbsCoordsys(), 0.5)  # Pixhawk NED
     irr.drawCoordsys(self.sim.vis, self.sim.global_coord, 1.0)                  # Global frame
+    
+    # for marker in self.sim.markers:
+    #   irr.drawCoordsys(self.sim.vis, marker.GetAbsCoordsys(), 0.1)
+      
+    # for marker in self.sim.m_markers:
+    #   irr.drawCoordsys(self.sim.vis, marker.GetAbsCoordsys(), 0.1)
+      
     self.sim.vis.EndScene()
     return True # Continue simulation
   
